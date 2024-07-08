@@ -1,0 +1,45 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'idle-legends-greek-heroes-backend'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=idle-legends-greek-heroes-backend",
+                    "--package=idle-legends-greek-heroes-backend"
+                ],
+                "filter": {
+                    "name": "idle-legends-greek-heroes-backend",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'idle-legends-greek-heroes-backend'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=idle-legends-greek-heroes-backend",
+                    "--package=idle-legends-greek-heroes-backend"
+                ],
+                "filter": {
+                    "name": "idle-legends-greek-heroes-backend",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}

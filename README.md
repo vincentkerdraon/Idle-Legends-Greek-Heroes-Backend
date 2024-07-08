@@ -36,8 +36,8 @@ The backend web server receives player and hero data, generates prompts based on
 
 2. **Clone the repository**: 
     ```bash
-    git clone https://github.com/yourusername/idle-game-backend.git
-    cd idle-game-backend
+    git clone https://gitlab.com/eclypsaine/Idle-Legends-Greek-Heroes-Backend.git
+    cd Idle-Legends-Greek-Heroes-Backend
     ```
 
 3. **Install dependencies**: 
