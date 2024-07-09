@@ -19,6 +19,11 @@
                     "kind": "bin"
                 }
             },
+            "env": {
+                "RUST_BACKTRACE": "1",
+                "OPENAI_SECRET": "redacted",
+                "RUST_LOG": "warn,idle-legends-greek-heroes-backend=trace",
+            },
             "args": [],
             "cwd": "${workspaceFolder}"
         },
