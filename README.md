@@ -101,6 +101,10 @@ The backend web server receives player and hero data, generates prompts based on
 
 Once the basics are in place, we can iterate on improvements like rate limiting and more sophisticated prompt generation.
 
+## Author
+
+Vincent KERDRAON
+
 ## License
 
 This project is licensed under the Creative Commons Attribution-NonCommercial 4.0 International License.
