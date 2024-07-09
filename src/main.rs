@@ -1,20 +1,17 @@
 use actix_web::{post, web, App, HttpResponse, HttpServer, Responder};
-use reqwest::Client;
-use serde::{Deserialize, Serialize};
 
-#[derive(Deserialize)]
-struct GenerateRequest {
-    player_id: String,
-    player_feats: Vec<String>,
-    hero_id: String,
-    hero_feats: Vec<String>,
-    new_creation: bool,
-}
+use std::sync::Arc;
 
-#[derive(Serialize)]
-struct GenerateResponse {
-    text: String,
-    image_url: String,
+extern crate openai;
+use openai::OpenAI;
+
+extern crate api;
+use api::GenerateRequest;
+use api::GenerateResponse;
+
+#[derive(Clone)]
+struct AppState {
+    openai: Arc<OpenAI>,
 }
 
 // curl -X POST http://127.0.0.1:8080/generate \
@@ -26,38 +23,59 @@ struct GenerateResponse {
 //     "hero_feats": ["featA", "featB"],
 //     "new_creation": true
 // }'
-
 #[post("/generate")]
-async fn generate(data: web::Json<GenerateRequest>, _client: web::Data<Client>) -> impl Responder {
-    // Placeholder logic for generating a prompt based on received data
+async fn generate(data: web::Json<GenerateRequest>, state: web::Data<AppState>) -> impl Responder {
     let prompt = format!(
         "PlayerID: {}, PlayerFeats: {:?}, HeroID: {}, HeroFeats: {:?}, NewCreation: {}",
         data.player_id, data.player_feats, data.hero_id, data.hero_feats, data.new_creation
     );
 
-    // Call OpenAI API (this is a placeholder and should be replaced with actual API call)
-    let response_text = format!("Generated text for prompt: {}", prompt);
-    let response_image_url = "https://example.com/generated_image.png".to_string();
+    match state
+        .openai
+        .call_openai_text("system_prompt", &prompt)
+        .await
+    {
+        Ok(response) => {
+            // Example response for testing (replace with actual OpenAI response handling)
+            let response_text = format!("Generated text: prompt={}, response={}", prompt, response);
+            let response_image_url = "https://example.com/generated_image.png".to_string();
 
-    let response = GenerateResponse {
-        text: response_text,
-        image_url: response_image_url,
-    };
+            let response = GenerateResponse {
+                text: response_text,
+                image_url: response_image_url,
+            };
 
-    HttpResponse::Ok().json(response)
+            HttpResponse::Ok().json(response)
+        }
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            HttpResponse::InternalServerError().finish()
+        }
+    }
 }
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    let client = Client::new();
+    // Read OPENAI_SECRET from environment variable
+    let openai = OpenAI::new().expect("Failed to initialize OpenAI");
+    let openai_arc = Arc::new(openai);
 
-    println!("running on http://127.0.0.1:8080");
+    // Create shared state for Actix web server
+    let app_state = AppState {
+        openai: openai_arc.clone(),
+    };
+
+    // Start Actix web server
     HttpServer::new(move || {
         App::new()
-            .app_data(web::Data::new(client.clone()))
+            .app_data(web::Data::new(app_state.clone()))
             .service(generate)
     })
-    .bind(("127.0.0.1", 8080))?
+    .bind("127.0.0.1:8080")?
     .run()
     .await
+    .map_err(|e| {
+        eprintln!("Server error: {}", e);
+        e
+    })
 }
