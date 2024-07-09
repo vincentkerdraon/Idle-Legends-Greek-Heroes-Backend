@@ -13,16 +13,17 @@ use api::GenerateResponse;
 struct AppState {
     openai: Arc<OpenAI>,
 }
-
-// curl -X POST http://127.0.0.1:8080/generate \
-// -H "Content-Type: application/json" \
-// -d '{
-//     "player_id": "player123",
-//     "player_feats": ["feat1", "feat2"],
-//     "hero_id": "hero123",
-//     "hero_feats": ["featA", "featB"],
-//     "new_creation": true
-// }'
+/*
+curl -X POST http://127.0.0.1:8080/generate \
+-H "Content-Type: application/json" \
+-d '{
+    "player_id": "player123",
+    "player_feats": ["feat1", "feat2"],
+    "hero_id": "hero123",
+    "hero_feats": ["featA", "featB"],
+    "new_creation": true
+}'
+*/
 #[post("/generate")]
 async fn generate(data: web::Json<GenerateRequest>, state: web::Data<AppState>) -> impl Responder {
     let prompt = format!(
@@ -64,6 +65,7 @@ async fn main() -> std::io::Result<()> {
     let app_state = AppState {
         openai: openai_arc.clone(),
     };
+    //FIXME bind from parameters
 
     // Start Actix web server
     HttpServer::new(move || {
