@@ -7,11 +7,13 @@ use openai::OpenAI;
 
 extern crate api;
 use api::GenerateRequest;
-use api::GenerateResponse;
+
+extern crate business;
+use business::Business;
 
 #[derive(Clone)]
 struct AppState {
-    openai: Arc<OpenAI>,
+    business: Arc<Business>,
 }
 /*
 curl -X POST http://127.0.0.1:8080/generate \
@@ -26,33 +28,13 @@ curl -X POST http://127.0.0.1:8080/generate \
 */
 
 #[post("/generate")]
-async fn generate(data: web::Json<GenerateRequest>, state: web::Data<AppState>) -> impl Responder {
-    if !data.is_valid() {
+async fn generate(input: web::Json<GenerateRequest>, state: web::Data<AppState>) -> impl Responder {
+    if !input.is_valid() {
         return HttpResponse::BadRequest().finish();
     }
 
-    let prompt = format!(
-        "PlayerID: {}, PlayerFeats: {:?}, HeroID: {}, HeroFeats: {:?}, NewCreation: {}",
-        data.player_id, data.player_feats, data.hero_id, data.hero_feats, data.new_creation
-    );
-
-    match state
-        .openai
-        .call_openai_text("system_prompt", &prompt)
-        .await
-    {
-        Ok(response) => {
-            // Example response for testing (replace with actual OpenAI response handling)
-            let response_text = format!("Generated text: prompt={}, response={}", prompt, response);
-            let response_image_url = "https://example.com/generated_image.png".to_string();
-
-            let response = GenerateResponse {
-                text: response_text,
-                image_url: response_image_url,
-            };
-
-            HttpResponse::Ok().json(response)
-        }
+    match state.business.logic(input.into_inner()).await {
+        Ok(response) => HttpResponse::Ok().json(response),
         Err(e) => {
             eprintln!("Error: {}", e);
             HttpResponse::InternalServerError().finish()
@@ -64,11 +46,10 @@ async fn generate(data: web::Json<GenerateRequest>, state: web::Data<AppState>) 
 async fn main() -> std::io::Result<()> {
     // Read OPENAI_SECRET from environment variable
     let openai = OpenAI::new().expect("Failed to initialize OpenAI");
-    let openai_arc = Arc::new(openai);
 
     // Create shared state for Actix web server
     let app_state = AppState {
-        openai: openai_arc.clone(),
+        business: Arc::new(Business::new(openai)),
     };
 
     // Start Actix web server
