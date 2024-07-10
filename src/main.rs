@@ -1,6 +1,6 @@
 use actix_web::{post, web, App, HttpResponse, HttpServer, Responder};
 
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 extern crate openai;
 use openai::OpenAI;
@@ -13,27 +13,20 @@ use business::Business;
 
 #[derive(Clone)]
 struct AppState {
-    business: Arc<Business>,
+    business: Arc<Mutex<Business>>,
 }
-/*
-curl -X POST http://127.0.0.1:8080/generate \
--H "Content-Type: application/json" \
--d '{
-    "player_id": "player123",
-    "player_feats": ["feat1", "feat2"],
-    "hero_id": "hero123",
-    "hero_feats": ["featA", "featB"],
-    "new_creation": true
-}'
-*/
 
 #[post("/generate")]
-async fn generate(input: web::Json<GenerateRequest>, state: web::Data<AppState>) -> impl Responder {
+async fn generate(
+    input: web::Json<GenerateRequest>,
+    state: web::Data<Arc<Mutex<Business>>>,
+) -> impl Responder {
     if !input.is_valid() {
         return HttpResponse::BadRequest().finish();
     }
 
-    match state.business.logic(input.into_inner()).await {
+    let mut business = state.lock().unwrap();
+    match business.logic(input.into_inner()).await {
         Ok(response) => HttpResponse::Ok().json(response),
         Err(e) => {
             eprintln!("Error: {}", e);
@@ -44,12 +37,15 @@ async fn generate(input: web::Json<GenerateRequest>, state: web::Data<AppState>)
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    // Read OPENAI_SECRET from environment variable
-    let openai = OpenAI::new().expect("Failed to initialize OpenAI");
+    env_logger::init();
+
+    // init reads OpenAI secret from environment variable
+    let openai: OpenAI = OpenAI::new().expect("Failed to initialize OpenAI");
+    let business = Business::new(openai);
 
     // Create shared state for Actix web server
     let app_state = AppState {
-        business: Arc::new(Business::new(openai)),
+        business: Arc::new(Mutex::new(business)),
     };
 
     // Start Actix web server
