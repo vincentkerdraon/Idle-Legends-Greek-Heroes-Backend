@@ -15,7 +15,7 @@ curl -v -X POST http://127.0.0.1:8080/generate \
 pub struct GenerateRequest {
     pub player_id: PlayerID,
     pub hero_id: HeroID,
-    pub feat: FeatID,
+    pub feat_id: FeatID,
 }
 
 #[derive(Serialize)]
@@ -75,6 +75,6 @@ pub struct HeroState {
 #[derive(Debug, Clone, Default)]
 pub struct PlayerState {
     pub player_id: PlayerID,
-    pub hero_states: Vec<HeroState>,
+    pub hero_state: HeroState,
     pub player_feats: Vec<FeatID>,
 }

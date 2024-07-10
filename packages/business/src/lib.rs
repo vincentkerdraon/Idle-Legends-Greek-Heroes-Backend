@@ -54,6 +54,7 @@ impl Business {
 
         let input_clone = input.clone();
         let player_id = input.player_id.clone();
+        let feat_id = input.feat_id.clone();
 
         if let Some(player_state_ref) = self.players.get(&input.player_id) {
             player_state = player_state_ref.clone();
@@ -64,27 +65,28 @@ impl Business {
             };
         }
 
-        let mut hero_state: HeroState;
         let action_prompt: String;
 
-        if let Some(hero_state_ref) = player_state.hero_states.last() {
-            hero_state = hero_state_ref.clone();
-            if hero_state.hero_feats.contains(&input.feat) {
-                return Err(BusinessError::FeatAlreadyDoneError(input.feat.to_string()));
+        if player_state.player_feats.is_empty() {
+            //first time with this hero. Send a welcome
+            (action_prompt, player_state.hero_state) =
+                self.prepare_new_hero(&input_clone, &player_state);
+        } else {
+            if player_state.player_feats.contains(&input.feat_id) {
+                return Err(BusinessError::FeatAlreadyDoneError(
+                    input.feat_id.to_string(),
+                ));
             }
-            match self.feat_description(&input.feat) {
+            match self.feat_description(&input.feat_id) {
                 Ok(text) => action_prompt = text,
                 Err(err) => return Err(err),
             }
-        } else {
-            //first time with this hero. Send a welcome
-            (action_prompt, hero_state) = self.prepare_new_character(&input_clone, &player_state);
         }
 
-        let hero_text_prompt = hero_state.hero_text_prompt.clone();
+        let hero_text_prompt = player_state.hero_state.hero_text_prompt.clone();
 
-        hero_state.hero_feats.push(input.feat);
-        player_state.hero_states.push(hero_state);
+        player_state.hero_state.hero_feats.push(feat_id.clone());
+        player_state.player_feats.push(feat_id);
         self.players.insert(player_id, player_state);
 
         let image_prompt_context = String::new();
@@ -111,7 +113,7 @@ impl Business {
         }
     }
 
-    pub fn prepare_new_character(
+    pub fn prepare_new_hero(
         &self,
         input: &GenerateRequest,
         player_state: &PlayerState,
