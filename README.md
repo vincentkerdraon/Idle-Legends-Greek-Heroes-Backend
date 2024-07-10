@@ -1,6 +1,6 @@
 # Idle Legends Greek Heroes Backend
 
-This project is the backend for an idle game created for a game jam. The game focuses on making heroes more powerful until they become gods. This backend is written in Rust and interacts with the OpenAI API to generate text and images based on player and hero data.
+This project is the backend for an idle game created for a game jam. The game focuses on making ancient greek heroes more powerful until they become gods. This backend is written in Rust and interacts with the OpenAI API to generate text and images based on player and hero data.
 
 ## Project Overview
 

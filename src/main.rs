@@ -24,8 +24,13 @@ curl -X POST http://127.0.0.1:8080/generate \
     "new_creation": true
 }'
 */
+
 #[post("/generate")]
 async fn generate(data: web::Json<GenerateRequest>, state: web::Data<AppState>) -> impl Responder {
+    if !data.is_valid() {
+        return HttpResponse::BadRequest().finish();
+    }
+
     let prompt = format!(
         "PlayerID: {}, PlayerFeats: {:?}, HeroID: {}, HeroFeats: {:?}, NewCreation: {}",
         data.player_id, data.player_feats, data.hero_id, data.hero_feats, data.new_creation
@@ -65,7 +70,6 @@ async fn main() -> std::io::Result<()> {
     let app_state = AppState {
         openai: openai_arc.clone(),
     };
-    //FIXME bind from parameters
 
     // Start Actix web server
     HttpServer::new(move || {
@@ -73,6 +77,7 @@ async fn main() -> std::io::Result<()> {
             .app_data(web::Data::new(app_state.clone()))
             .service(generate)
     })
+    //FIXME bind from parameters
     .bind("127.0.0.1:8080")?
     .run()
     .await

@@ -14,3 +14,9 @@ pub struct GenerateResponse {
     pub text: String,
     pub image_url: String,
 }
+
+impl GenerateRequest {
+    pub fn is_valid(&self) -> bool {
+        !self.player_id.trim().is_empty() && !self.hero_id.trim().is_empty()
+    }
+}
