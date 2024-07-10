@@ -13,18 +13,24 @@ use api::GenerateResponse;
 struct AppState {
     openai: Arc<OpenAI>,
 }
+/*
+curl -X POST http://127.0.0.1:8080/generate \
+-H "Content-Type: application/json" \
+-d '{
+    "player_id": "player123",
+    "player_feats": ["feat1", "feat2"],
+    "hero_id": "hero123",
+    "hero_feats": ["featA", "featB"],
+    "new_creation": true
+}'
+*/
 
-// curl -X POST http://127.0.0.1:8080/generate \
-// -H "Content-Type: application/json" \
-// -d '{
-//     "player_id": "player123",
-//     "player_feats": ["feat1", "feat2"],
-//     "hero_id": "hero123",
-//     "hero_feats": ["featA", "featB"],
-//     "new_creation": true
-// }'
 #[post("/generate")]
 async fn generate(data: web::Json<GenerateRequest>, state: web::Data<AppState>) -> impl Responder {
+    if !data.is_valid() {
+        return HttpResponse::BadRequest().finish();
+    }
+
     let prompt = format!(
         "PlayerID: {}, PlayerFeats: {:?}, HeroID: {}, HeroFeats: {:?}, NewCreation: {}",
         data.player_id, data.player_feats, data.hero_id, data.hero_feats, data.new_creation
@@ -71,6 +77,7 @@ async fn main() -> std::io::Result<()> {
             .app_data(web::Data::new(app_state.clone()))
             .service(generate)
     })
+    //FIXME bind from parameters
     .bind("127.0.0.1:8080")?
     .run()
     .await

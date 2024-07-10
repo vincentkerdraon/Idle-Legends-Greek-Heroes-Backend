@@ -38,10 +38,10 @@ impl OpenAI {
         prompt_user: &str,
     ) -> Result<String, OpenAIError> {
         let client = reqwest::Client::new();
-        let url = "https://api.openai.com/v1/completions";
+        const URL: &str = "https://api.openai.com/v1/completions";
 
         let resp = client
-            .post(url)
+            .post(URL)
             .header("Authorization", format!("Bearer {}", self.secret_key))
             .json(&json!({
                 "model": "gpt-3.5-turbo",
