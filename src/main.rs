@@ -3,6 +3,7 @@ use business::BusinessError;
 
 use std::{
     collections::HashMap,
+    env,
     sync::{Arc, Mutex},
 };
 
@@ -82,14 +83,15 @@ async fn main() -> std::io::Result<()> {
     };
     let state_arc = Arc::new(Mutex::new(state));
 
+    let bind = env::var("BIND").expect("Please set the BIND environment variable (127.0.0.1:8080)");
+
     // Start Actix web server
     HttpServer::new(move || {
         App::new()
             .app_data(web::Data::new(state_arc.clone()))
             .service(generate)
     })
-    //FIXME bind from parameters
-    .bind("127.0.0.1:8080")?
+    .bind(bind)?
     .run()
     .await
     .map_err(|e| {
