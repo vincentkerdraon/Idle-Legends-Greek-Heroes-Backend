@@ -7,7 +7,7 @@ curl -v -X POST http://127.0.0.1:8080/generate \
 -d '{
     "player_id": "player123",
     "hero_id": "hero123",
-    "feat": "featA"
+    "feat_id": "featA"
 }'
 */
 
@@ -26,7 +26,9 @@ pub struct GenerateResponse {
 
 impl GenerateRequest {
     pub fn is_valid(&self) -> bool {
-        !self.player_id.trim().is_empty() && !self.hero_id.trim().is_empty()
+        !self.player_id.trim().is_empty()
+            && !self.hero_id.trim().is_empty()
+            && !self.feat_id.trim().is_empty()
     }
 }
 
@@ -54,6 +56,11 @@ impl Eq for HeroID {}
 
 #[derive(Debug, Clone, PartialEq, Hash, Default, Deserialize)]
 pub struct FeatID(String);
+impl FeatID {
+    pub fn new(id: &str) -> Self {
+        FeatID(id.to_string())
+    }
+}
 impl Deref for FeatID {
     type Target = String;
 
@@ -62,6 +69,8 @@ impl Deref for FeatID {
     }
 }
 impl Eq for FeatID {}
+
+pub static FEAT_ID_INIT: &str = "init";
 
 #[derive(Debug, Clone, Default)]
 pub struct HeroState {
