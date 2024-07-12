@@ -1,4 +1,5 @@
 use actix_web::{post, web, App, HttpResponse, HttpServer, Responder};
+use business::BusinessError;
 
 use std::{
     collections::HashMap,
@@ -33,28 +34,35 @@ async fn generate(
     match business::match_player(&mut state_mutex.players, input.into_inner()) {
         Ok(ps) => player_state = ps,
         Err(err) => match err {
-            //FIXME
-            // FeatAlreadyDoneError => {
-            //     return HttpResponse::Found().finish();
-            // }
+            BusinessError::FeatAlreadyDoneError() => {
+                return HttpResponse::Found().finish();
+            }
             _ => {
-                eprintln!("Error: {}", err);
+                eprintln!("Error: {:?}", err);
                 return HttpResponse::InternalServerError().finish();
             }
         },
     }
-    //release the mutex
+    //release the mutex early
     let open_ai = state_mutex.generator.clone();
     drop(state_mutex);
 
-    // return HttpResponse::InternalServerError().finish();
-
     match business::generate(open_ai, player_state).await {
         Ok(response) => HttpResponse::Ok().json(response),
-        Err(e) => {
-            eprintln!("Error: {}", e);
-            HttpResponse::InternalServerError().finish()
-        }
+
+        Err(err) => match err {
+            BusinessError::GenerationError(err) => {
+                eprintln!("Generation Error: {}", err);
+                return HttpResponse::ServiceUnavailable().finish();
+            }
+            BusinessError::FeatUnknownError(_) => {
+                return HttpResponse::NotFound().finish();
+            }
+            _ => {
+                eprintln!("Error: {}", err);
+                HttpResponse::InternalServerError().finish()
+            }
+        },
     }
 }
 
