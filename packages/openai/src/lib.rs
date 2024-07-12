@@ -21,42 +21,48 @@ impl fmt::Display for OpenAIError {
 
 impl std::error::Error for OpenAIError {}
 
+pub fn load_secret() -> Result<String, Error> {
+    let secret_key =
+        env::var("OPENAI_SECRET").expect("Please set the OPENAI_SECRET environment variable");
+    Ok(secret_key)
+}
+
+#[derive(Clone)]
 pub struct OpenAI {
     secret_key: String,
 }
-
 impl OpenAI {
-    pub fn new() -> Result<Self, Error> {
-        let secret_key =
-            env::var("OPENAI_SECRET").expect("Please set the OPENAI_SECRET environment variable");
-        Ok(Self { secret_key })
+    pub fn new(secret_key: String) -> Self {
+        Self { secret_key }
     }
 
-    pub async fn call_openai_text(
+    pub async fn generate_text(
         &self,
         prompt_system: &str,
         prompt_user: &str,
     ) -> Result<String, OpenAIError> {
         let client = reqwest::Client::new();
-        const URL: &str = "https://api.openai.com/v1/completions";
+        const URL: &str = "https://api.openai.com/v1/chat/completions";
+
+        let json_request = json!({
+            "model": "gpt-3.5-turbo",
+            "messages": [
+                {
+                    "role": "system",
+                    "content": prompt_system,
+                },
+                {
+                    "role": "user",
+                    "content": prompt_user,
+                },
+            ],
+            "max_tokens": 100
+        });
 
         let resp = client
             .post(URL)
             .header("Authorization", format!("Bearer {}", self.secret_key))
-            .json(&json!({
-                "model": "gpt-3.5-turbo",
-                "messages": [
-                    {
-                        "role": "system",
-                        "content": prompt_system,
-                    },
-                    {
-                        "role": "user",
-                        "content": prompt_user,
-                    },
-                ],
-                "max_tokens": 100
-            }))
+            .json(&json_request)
             .send()
             .await
             .map_err(|e| OpenAIError::ApiError(format!("Request to OpenAI API failed: {}", e)))?;
@@ -76,12 +82,13 @@ impl OpenAI {
             }
         }
 
-        Err(OpenAIError::DataError(
-            "Unable to find valid response from OpenAI".to_string(),
-        ))
+        Err(OpenAIError::DataError(format!(
+            "Unable to find valid response from OpenAI. {}",
+            json_response
+        )))
     }
 
-    pub async fn call_openai_image(&self, _prompt: &str) -> Result<String, Error> {
+    pub async fn generate_image(&self, _prompt: &str) -> Result<String, Error> {
         // Implement image API call logic here
         unimplemented!("Image API call not yet implemented")
     }
