@@ -6,3 +6,4 @@ edition = "2021"
 [dependencies]
 openai = { path = "../openai" }
 api = { path = "../api" }
+tokio = { version = "1", features = ["full"] }
