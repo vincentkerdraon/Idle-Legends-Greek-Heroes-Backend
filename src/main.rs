@@ -54,11 +54,9 @@ async fn generate(
         Err(err) => match err {
             BusinessError::GenerationError(err) => {
                 eprintln!("Generation Error: {}", err);
-                return HttpResponse::ServiceUnavailable().finish();
+                HttpResponse::ServiceUnavailable().finish()
             }
-            BusinessError::FeatUnknownError(_) => {
-                return HttpResponse::NotFound().finish();
-            }
+            BusinessError::FeatUnknownError(_) => HttpResponse::NotFound().finish(),
             _ => {
                 eprintln!("Error: {}", err);
                 HttpResponse::InternalServerError().finish()
@@ -78,7 +76,7 @@ async fn main() -> std::io::Result<()> {
     //data is shared across all workers
     let players = HashMap::new();
     let state = AppState {
-        players: players,
+        players,
         generator: OpenAI::new(open_ai_secret),
     };
     let state_arc = Arc::new(Mutex::new(state));
