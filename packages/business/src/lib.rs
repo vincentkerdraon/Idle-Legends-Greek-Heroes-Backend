@@ -3,6 +3,7 @@ use api::*;
 use std::{collections::HashMap, fmt};
 extern crate openai;
 use openai::OpenAI;
+use tokio::try_join;
 
 #[derive(Debug)]
 pub enum BusinessError {
@@ -60,6 +61,46 @@ pub fn match_player(
     player_state.player_feats.push(feat_id);
     players.insert(player_id, player_state.clone());
     Ok(player_state.clone())
+}
+
+pub async fn generate(
+    generator: OpenAI,
+    player_state: PlayerState,
+) -> Result<GenerateResponse, BusinessError> {
+    let general_prompt_context = "This is used in a video game making ancient greek heroes more powerful until they become gods.".to_string();
+    let text_prompt_context = " The answer should contain around 50 signs.";
+    let image_prompt_style = " This image is part of a game, where the artistic direction asks for an ancient Greek style, specifically Hellenic style. The artwork should look like a mosaic, sculpture, or vase-painting. It must depict a simple scene showing the main character in a situation. The image should be very clean and easy to understand.";
+
+    let action_prompt: String;
+    match feat_description(&player_state.hero_state.hero_feats.last().unwrap()) {
+        Ok(text) => action_prompt = text,
+        Err(err) => return Err(err),
+    }
+
+    let image_prompt = general_prompt_context.clone()
+        + &image_prompt_style
+        + &player_state.hero_state.hero_image_prompt
+        + &action_prompt;
+
+    let text_prompt_system = general_prompt_context.clone() + &text_prompt_context;
+    let text_prompt_user = player_state.hero_state.hero_text_prompt + &action_prompt;
+
+    println!(
+        "GENERATE...\ntext_prompt_system={}\ntext_prompt_user={}\nimage_prompt={}",
+        text_prompt_system, text_prompt_user, image_prompt
+    );
+
+    let text_future = generator.generate_text(&text_prompt_system, &text_prompt_user);
+    let image_future = generator.generate_image(&image_prompt);
+
+    match try_join!(text_future, image_future) {
+        Ok((text, image_url)) => {
+            println!("GENERATE=>\ntext={}\nimage_url={}", text, image_url);
+            let res = GenerateResponse { image_url, text };
+            Ok(res)
+        }
+        Err(err) => Err(BusinessError::GenerationError(err.to_string())),
+    }
 }
 
 fn prepare_new_hero(input: &GenerateRequest, player_state: &PlayerState) -> HeroState {
@@ -138,45 +179,17 @@ HeroState {
     return heroes[0].clone();
 }
 
-pub async fn generate(
-    generator: OpenAI,
-    player_state: PlayerState,
-) -> Result<GenerateResponse, BusinessError> {
-    let general_prompt_context = "This is used in a video game making ancient greek heroes more powerful until they become gods.".to_string();
-    let text_prompt_context = "The answer should contain around 50 signs.";
-
-    let hero_text_prompt = player_state.hero_state.hero_text_prompt.clone();
-    let action_prompt: String;
-    match feat_description(&player_state.hero_state.hero_feats.last().unwrap()) {
-        Ok(text) => action_prompt = text,
-        Err(err) => return Err(err),
-    }
-
-    let image_prompt_context = String::new();
-
-    let text_prompt_system = general_prompt_context + text_prompt_context;
-    let text_prompt_user = hero_text_prompt + &action_prompt;
-    match generator
-        .generate_text(&text_prompt_system, &text_prompt_user)
-        .await
-    {
-        Ok(text) => {
-            let res = GenerateResponse {
-                image_url: "TODO".to_string(),
-                text,
-            };
-
-            Ok(res)
-        }
-        Err(err) => Err(BusinessError::GenerationError(err.to_string())),
-    }
-}
-
 fn feat_description(feat_id: &FeatID) -> Result<String, BusinessError> {
     match feat_id.as_str() {
         //FIXME use FEAT_ID_INIT
-        "init" => Ok(String::from("The character is between 8 and 14 years old. They are level 0 and doesn't seem to be able to do much.")),
+        "init" => Ok(String::from("The character is between 8 and 14 years old. They are level 0 and is not able to do much. Show the very beginning")),
+
         "featA" => Ok(String::from("The character just killed a lion and seems injured from the fight.")),
         _ => Err(BusinessError::FeatUnknownError(feat_id.clone())),
     }
 }
+
+//FIXME
+// "prompt": " For this image specifically, the character is the son of Medusa and the Minotaur. He is a 25-year-old male with a straight nose and wavy brown hair. He is standing in front of the Parthenon, a temple dedicated to the goddess Athena. The Parthenon decorative sculptures are considered some of the high points of classical Greek art.",
+// "prompt": "Create a historically accurate image of a talented ancient Greek sculptor named Pygmalion working on an exquisitely beautiful ivory statue of a woman. The statue, named Galatea, is so lifelike that she appears real, with delicate features and flowing hair. Pygmalion gazes at her with deep affection and longing, surrounded by his workshop filled with sculpting tools and other artworks. In the background, the goddess Aphrodite looks on, ready to bring the statue to life.",
+// "prompt": "Create a realistic image of the ancient Greek Dedalus creating the Labyrinth for King Minos of Crete which imprisoned the Minotaur. It must be historically accurate.",
