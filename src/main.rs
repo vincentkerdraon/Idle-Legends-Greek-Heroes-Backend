@@ -1,5 +1,7 @@
+use ::business::error::BusinessError;
+use ::openai::openai::*;
 use actix_web::{post, web, App, HttpResponse, HttpServer, Responder};
-use business::BusinessError;
+use business::business;
 
 use std::{
     collections::HashMap,
@@ -7,13 +9,8 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-extern crate openai;
-use openai::OpenAI;
-
 extern crate api;
 use api::*;
-
-extern crate business;
 
 struct AppState {
     generator: OpenAI,
@@ -70,7 +67,7 @@ async fn main() -> std::io::Result<()> {
     env_logger::init();
 
     // init reads OpenAI secret from environment variable
-    let open_ai_secret = openai::load_secret().expect("Failed to initialize OpenAI");
+    let open_ai_secret = openai::openai::load_secret().expect("Failed to initialize OpenAI");
     // static open_ai_secret_static: &'static str = open_ai_secret;
 
     //data is shared across all workers
