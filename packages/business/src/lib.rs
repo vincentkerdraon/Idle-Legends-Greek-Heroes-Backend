@@ -1,27 +1,25 @@
 extern crate api;
 use api::*;
-use std::{collections::HashMap, fmt, sync::MutexGuard};
+use std::{collections::HashMap, fmt};
 extern crate openai;
 use openai::OpenAI;
 
 #[derive(Debug)]
 pub enum BusinessError {
-    InvalidInputError(String),
     GenerationError(String),
-    PlayerNotFoundError(String),
-    FeatUnknownError(String),
-    FeatAlreadyDoneError(String),
+    FeatUnknownError(FeatID),
+    FeatAlreadyDoneError(),
 }
 
 impl fmt::Display for BusinessError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            BusinessError::InvalidInputError(msg) => write!(f, "Invalid Input Error: {}", msg),
             BusinessError::GenerationError(msg) => write!(f, "Generation Error: {}", msg),
-            BusinessError::PlayerNotFoundError(msg) => write!(f, "Player Not Found Error: {}", msg),
-            BusinessError::FeatUnknownError(msg) => write!(f, "Feat Unknown Error: {}", msg),
-            BusinessError::FeatAlreadyDoneError(msg) => {
-                write!(f, "Feat Already Done Error: {}", msg)
+            BusinessError::FeatUnknownError(feat_id) => {
+                write!(f, "Feat Unknown Error: {:?}", feat_id)
+            }
+            BusinessError::FeatAlreadyDoneError() => {
+                write!(f, "Feat Already Done")
             }
         }
     }
@@ -54,9 +52,7 @@ pub fn match_player(
         feat_id = FeatID::new(FEAT_ID_INIT);
     } else {
         if player_state.player_feats.contains(&input.feat_id) {
-            return Err(BusinessError::FeatAlreadyDoneError(
-                input.feat_id.to_string(),
-            ));
+            return Err(BusinessError::FeatAlreadyDoneError());
         }
     }
 
@@ -181,6 +177,6 @@ fn feat_description(feat_id: &FeatID) -> Result<String, BusinessError> {
         //FIXME use FEAT_ID_INIT
         "init" => Ok(String::from("The character is between 8 and 14 years old. They are level 0 and doesn't seem to be able to do much.")),
         "featA" => Ok(String::from("The character just killed a lion and seems injured from the fight.")),
-        _ => Err(BusinessError::FeatUnknownError(feat_id.to_string())),
+        _ => Err(BusinessError::FeatUnknownError(feat_id.clone())),
     }
 }

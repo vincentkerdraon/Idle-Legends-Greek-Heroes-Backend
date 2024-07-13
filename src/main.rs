@@ -1,7 +1,9 @@
 use actix_web::{post, web, App, HttpResponse, HttpServer, Responder};
+use business::BusinessError;
 
 use std::{
     collections::HashMap,
+    env,
     sync::{Arc, Mutex},
 };
 
@@ -33,28 +35,35 @@ async fn generate(
     match business::match_player(&mut state_mutex.players, input.into_inner()) {
         Ok(ps) => player_state = ps,
         Err(err) => match err {
-            //FIXME
-            // FeatAlreadyDoneError => {
-            //     return HttpResponse::Found().finish();
-            // }
+            BusinessError::FeatAlreadyDoneError() => {
+                return HttpResponse::Found().finish();
+            }
             _ => {
-                eprintln!("Error: {}", err);
+                eprintln!("Error: {:?}", err);
                 return HttpResponse::InternalServerError().finish();
             }
         },
     }
-    //release the mutex
+    //release the mutex early
     let open_ai = state_mutex.generator.clone();
     drop(state_mutex);
 
-    // return HttpResponse::InternalServerError().finish();
-
     match business::generate(open_ai, player_state).await {
         Ok(response) => HttpResponse::Ok().json(response),
-        Err(e) => {
-            eprintln!("Error: {}", e);
-            HttpResponse::InternalServerError().finish()
-        }
+
+        Err(err) => match err {
+            BusinessError::GenerationError(err) => {
+                eprintln!("Generation Error: {}", err);
+                return HttpResponse::ServiceUnavailable().finish();
+            }
+            BusinessError::FeatUnknownError(_) => {
+                return HttpResponse::NotFound().finish();
+            }
+            _ => {
+                eprintln!("Error: {}", err);
+                HttpResponse::InternalServerError().finish()
+            }
+        },
     }
 }
 
@@ -74,14 +83,15 @@ async fn main() -> std::io::Result<()> {
     };
     let state_arc = Arc::new(Mutex::new(state));
 
+    let bind = env::var("BIND").expect("Please set the BIND environment variable (127.0.0.1:8080)");
+
     // Start Actix web server
     HttpServer::new(move || {
         App::new()
             .app_data(web::Data::new(state_arc.clone()))
             .service(generate)
     })
-    //FIXME bind from parameters
-    .bind("127.0.0.1:8080")?
+    .bind(bind)?
     .run()
     .await
     .map_err(|e| {
