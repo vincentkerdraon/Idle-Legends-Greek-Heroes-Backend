@@ -7,7 +7,7 @@ curl -v -X POST http://127.0.0.1:8080/generate \
 -d '{
     "player_id": "player123",
     "hero_id": "hero123",
-    "feat_id": "featA"
+    "feat_id": "init"
 }'
 */
 
