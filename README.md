@@ -1,19 +1,12 @@
 # Idle Legends Greek Heroes Backend
 
-This project is the backend for an idle game created for a game jam. The game focuses on making ancient greek heroes more powerful until they become gods. This backend is written in Rust and interacts with the OpenAI API to generate text and images based on player and hero data.
+This project is the backend for an idle game created for a game jam. The game focuses on making ancient Greek heroes more powerful until they become gods. This backend is written in Rust and interacts with the OpenAI API to generate text and images based on player and hero data.
 
 ## Project Overview
 
 The backend web server receives player and hero data, generates prompts based on that data, and uses the OpenAI API to generate corresponding text and images. The server then returns the generated content to the client.
 
-## Requirements
-
-### Receive Data
-- `PlayerID` (string)
-- `PlayerFeats` (array of strings)
-- `HeroID` (string)
-- `HeroFeats` (array of strings)
-- `NewCreation` (boolean)
+## Features
 
 ### Process Data
 - Generate a variety of prompts based on the received data.
@@ -47,6 +40,8 @@ The backend web server receives player and hero data, generates prompts based on
 
 4. **Run the server**:
     ```bash
+    export OPENAI_SECRET="redacted"
+    export BIND="127.0.0.1:8080"
     cargo run
     ```
 
@@ -58,11 +53,9 @@ The backend web server receives player and hero data, generates prompts based on
 - **Request**:
     ```json
     {
-        "PlayerID": "string",
-        "PlayerFeats": ["string", "string"],
-        "HeroID": "string",
-        "HeroFeats": ["string", "string"],
-        "NewCreation": true
+        "player_id": "string",
+        "hero_id": "string",
+        "feat_id": "string"
     }
     ```
 - **Response**:
@@ -72,34 +65,6 @@ The backend web server receives player and hero data, generates prompts based on
         "image_url": "string"
     }
     ```
-
-## Considerations
-
-1. **Prompt Variety**: Ensure prompts are diverse and cover different scenarios for hero creation and feats.
-2. **Error Handling**: Implement robust error handling, especially for API calls.
-3. **Rate Limiting**: Add basic rate limiting once the basics are functional to prevent API spamming.
-4. **Scalability**: Ensure the server can handle multiple concurrent requests efficiently.
-
-## Next Steps
-
-1. **Define Endpoints**:
-   - `/generate` (POST): Accepts player and hero data, processes it, and returns the text and image.
-
-2. **Basic Server Setup**:
-   - Initialize a new Rust project with `actix-web`.
-   - Define the `/generate` endpoint.
-
-3. **Prompt Generation Logic**:
-   - Implement the logic to generate prompts based on the received data.
-
-4. **API Integration**:
-   - Set up the OpenAI API interaction.
-   - Handle responses from the API.
-
-5. **Response Handling**:
-   - Structure the server response to include both the text and image.
-
-Once the basics are in place, we can iterate on improvements like rate limiting and more sophisticated prompt generation.
 
 ## Author
 

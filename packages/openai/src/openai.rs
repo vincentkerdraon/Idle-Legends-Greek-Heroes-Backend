@@ -1,0 +1,112 @@
+use reqwest::Error;
+use serde_json::json;
+use std::env;
+
+use crate::error::*;
+
+pub fn load_secret() -> Result<String, Error> {
+    let secret_key =
+        env::var("OPENAI_SECRET").expect("Please set the OPENAI_SECRET environment variable");
+    Ok(secret_key)
+}
+
+#[derive(Clone)]
+pub struct OpenAI {
+    secret_key: String,
+}
+
+impl OpenAI {
+    pub fn new(secret_key: String) -> Self {
+        Self { secret_key }
+    }
+
+    pub async fn generate_text(
+        &self,
+        prompt_system: &str,
+        prompt_user: &str,
+    ) -> Result<String, OpenAIError> {
+        let client = reqwest::Client::new();
+        const URL: &str = "https://api.openai.com/v1/chat/completions";
+
+        let json_request = json!({
+            "model": "gpt-3.5-turbo",
+            "messages": [
+                {
+                    "role": "system",
+                    "content": prompt_system,
+                },
+                {
+                    "role": "user",
+                    "content": prompt_user,
+                },
+            ],
+            "max_tokens": 100
+        });
+
+        let resp = client
+            .post(URL)
+            .header("Authorization", format!("Bearer {}", self.secret_key))
+            .json(&json_request)
+            .send()
+            .await
+            .map_err(|e| OpenAIError::ApiError(format!("Request to OpenAI API failed: {}", e)))?;
+
+        let json_response: serde_json::Value = resp
+            .json()
+            .await
+            .map_err(|e| OpenAIError::ApiError(format!("Failed to parse JSON response: {}", e)))?;
+
+        if let Some(choices) = json_response["choices"].as_array() {
+            if let Some(choice) = choices.get(0) {
+                if let Some(message) = choice["message"].as_object() {
+                    if let Some(content) = message["content"].as_str() {
+                        return Ok(content.to_string());
+                    }
+                }
+            }
+        }
+
+        Err(OpenAIError::DataError(format!(
+            "Unable to find valid response from OpenAI. Response: {}",
+            json_response
+        )))
+    }
+
+    pub async fn generate_image(&self, prompt: &str) -> Result<String, OpenAIError> {
+        let client = reqwest::Client::new();
+        const URL: &str = "https://api.openai.com/v1/images/generations";
+
+        let json_request = json!({
+            "model": "dall-e-3",
+            "prompt": prompt,
+            "n": 1,
+            "size": "1024x1024"
+        });
+
+        let resp = client
+            .post(URL)
+            .header("Authorization", format!("Bearer {}", self.secret_key))
+            .json(&json_request)
+            .send()
+            .await
+            .map_err(|e| OpenAIError::ApiError(format!("Request to OpenAI API failed: {}", e)))?;
+
+        let json_response: serde_json::Value = resp
+            .json()
+            .await
+            .map_err(|e| OpenAIError::ApiError(format!("Failed to parse JSON response: {}", e)))?;
+
+        if let Some(data) = json_response["data"].as_array() {
+            if let Some(image_url) = data.get(0) {
+                if let Some(url) = image_url["url"].as_str() {
+                    return Ok(url.to_string());
+                }
+            }
+        }
+
+        Err(OpenAIError::DataError(format!(
+            "Unable to find valid image URL in OpenAI response. Response: {}",
+            json_response
+        )))
+    }
+}

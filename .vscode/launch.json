@@ -21,6 +21,7 @@
             },
             "env": {
                 "RUST_BACKTRACE": "1",
+                "OPENAI_SECRET": "redacted",
                 "BIND": "127.0.0.1:8080",
                 "RUST_LOG": "warn,actix_web=debug,idle-legends-greek-heroes-backend=trace",
             },
